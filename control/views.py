@@ -581,7 +581,7 @@ def accionesMultiples(request): #Aplicamos acciones de cambios a multiples direc
         messages.error(request, "Método no permitido.")
         return redirect('detector')  # Redirigir a la página principal
 
-@login_required
+# Revisar para quitar el endpoint 
 def endpointBloqueadas(request): # Ruta que redirige al endpoint generado de IPs Bloqueadas
     historial = Historial_IP_FW_Bloqueadas.objects.all()
     ips_bloqueadas = [item.ipBloqueada.ip for item in historial]
