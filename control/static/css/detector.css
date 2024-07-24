@@ -1,0 +1,78 @@
+
+table tr .acciones{
+    display: grid;
+    grid-template-columns: repeat(5, auto); /* Define 5 columnas automáticas */
+    align-items: center; /* Alinea los elementos verticalmente */
+    grid-template-rows: 1fr; /* Hace que la fila ocupe todo el espacio disponible en altura */
+    gap: 5px; /* Espacio entre las celdas */
+}
+
+
+table tr td a{
+    border-radius: 5%;
+    text-decoration: none;
+    color: white;
+}
+
+table tr td a :hover{
+    border-radius: 5%;
+    text-decoration: none;
+}
+
+table tr td a i{
+    padding: 5px;
+    border-radius: 3px
+}
+
+table tr td .modificar i{
+    background-color:#f49e4c;
+}
+
+table tr td .eliminada i{
+    background-color:#343a40;
+}
+
+table tr td .exonerar{
+    background-color:#2ca58d;
+}
+
+table tr td .bloquear{
+    background-color:#da3e52;
+}
+
+table tr td .quitar{
+    color: #343a40;
+    background-color:#d4d4d4;
+}
+
+table tr td hr {
+    margin: 5px 0px;
+}
+
+.accionesExternas {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.accionesExternas button:hover {
+    background-color: #343a40 ;
+    border-color: #343a40;
+}
+
+.accionesMultiples {
+    display: grid;
+    grid-template-columns:65% 20% 15%;
+    grid-template-areas: 
+        "blanco selector boton";
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.accionesMultiples select{
+    grid-area: selector;
+}
+
+.accionesMultiples button{
+    grid-area: boton;
+}

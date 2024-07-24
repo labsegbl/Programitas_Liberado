@@ -1,0 +1,106 @@
+{% load static %}
+
+<!DOCTYPE HTML5>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seguridad de la Información</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+    <link href="{% static 'css/styleSidebar.css' %}" rel="stylesheet">
+    {% block estilos %}{% endblock %}
+   
+</head>
+<body>
+    <header>
+        <!-- Fixed navbar -->
+        <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+          <a class="navbar-brand" href="#">Programitas SI</a>
+          <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav mr-auto">
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'inicio' %}"><i class="fas fa-home"></i> Inicio</a>
+              </li>
+              <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                  <i class="fas fa-asterisk"></i>
+                  Direcciones IP
+                </a>
+                <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                    <a class="dropdown-item" href="{% url 'detector' %}"><i class="fas fa-search"></i> Detección IP</a>
+                    <a class="dropdown-item" href="{% url 'listaNegra' %}"><i class="fas fa-th-list"></i> IPs Bloqueadas</a>
+                    <a class="dropdown-item" href="{% url 'endpoint' %}"><i class="fas fa-stream"></i> IPs EndPoint</a>
+                  <div class="dropdown-divider"></div>
+                </div>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'crearUsuario' %}"><i class="fas fa-user-plus"></i> Crear Usuario</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'signout' %}"><i class="fas fa-sign-out-alt"></i> Salir</a>
+            </li>
+            </ul>
+            
+          </div>
+        </nav>
+    </header>
+
+    <div class="fondo">
+        <div class="content" id="content">
+            <!-- Contenido principal de la pagina-->
+            {% block content %}{% endblock %}
+
+            {% if messages %}
+            <!-- Alerta de mensaje -->
+            <div class="alert alert-secondary alert-dismissible fade show" role="alert">
+                {% for message in messages %}
+                    {{ message }}
+                {% endfor %}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            {% endif %}
+            
+            {% if advertencia %}
+            <!-- Alerta de advertencia -->
+            <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            {{ advertencia }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+            </div>
+            {% endif %}
+
+            {% if error %}
+            <!-- Alerta de error -->
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                {{ error }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            {% endif %}
+
+            {% if exito %}
+            <!-- Alerta de exito -->
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                {{ exito }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            {% endif %}
+
+            <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+            <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+       </div>
+    </div> 
+    {% block modales %}{% endblock %}   
+</body>
+</html>

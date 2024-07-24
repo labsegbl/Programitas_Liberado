@@ -1,0 +1,289 @@
+{% extends 'sidebar.html' %}
+{% load static %}
+
+{% block estilos %}
+<link href="{% static 'css/detector.css' %}" rel="stylesheet">
+<script src="https://code.jquery.com/jquery-3.7.1.js"></script>
+<script src="https://cdn.datatables.net/2.0.5/js/dataTables.js"></script>
+<script src="https://cdn.datatables.net/2.0.5/js/dataTables.bootstrap4.js"></script>
+<link href="https://cdn.datatables.net/2.0.5/css/dataTables.bootstrap4.css" rel="stylesheet">
+
+<script>
+    jQuery.noConflict();
+    jQuery(document).ready(function($) {
+        var table = $('#tabla_datos').DataTable();
+    });
+</script>
+
+
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2 style="margin-top: 15px;">Buscador de IPs </h2>
+
+    <div class="accionesExternas">
+        <!-- Primer botón y modal -->
+        <button type="button" class="btn btn-primary mb-2" data-toggle="modal" data-target="#modalForm1">
+            Subir Archivo
+        </button>
+
+         <!-- Segundo botón y modal -->
+         <button type="button" class="btn btn-primary mb-2" data-toggle="modal" data-target="#modalForm2">
+            Ingresar Manual
+        </button>
+
+        <!-- Tercer botón y funcion -->
+        <a type="button" class="btn btn-primary mb-2" href="{% url 'exportar' tipo=1 %}"> <!-- data-toggle="modal" data-target="#modalForm2"> -->
+            Exportar IPs
+        </a>
+
+    </div>
+  
+    <h4 style="background-color: #343a40; border-radius: 10px; color: white; padding-left: 20px;"><strong>Listado de IPs</strong></h4><hr>
+    <!--<div class="accionesMultiples">
+        <select id="select-acciones" class="form-control">
+            <option value="" disabled selected>Seleccione una acción</option>
+            <option value="eliminar">Eliminar</option>
+            <option value="bloquear">Bloquear</option>
+            <option value="exonerar">Exonerar</option>
+        </select>
+        <button id="btn-ejecutar-accion" class="btn btn-primary">Ejecutar Acción</button>
+    </div>-->
+    
+    <table id="tabla_datos" class="table table-striped table-bordered" style="width:100%">
+        <thead>
+          <tr>
+            <!--<th></th>
+            <th>#</th>-->
+            <th>IP</th>
+            <th>Dominio</th>
+            <th>Malicioso</th>
+            <th>Estado</th>
+            <th>País</th>
+            <th>Usuario</th>
+            <th>En Firewall</th>
+            <th>Ataques</th>
+            <th>Peticiones</th>
+            <th>Ingreso</th>
+            <th>Acciones</th>
+          </tr>
+        </thead> 
+        {% for ip in ips %}
+        <tr>
+          <!--<td><input type="checkbox" class="fila-checkbox" value="{{ ip.id }}"></td>
+          <td></td>-->
+          <td> {{ ip.ip }}</td>
+          <td> {{ ip.dominio.nomDominio }}</td>
+          <td> {{ ip.malicioso }}</td>
+          <td> {{ ip.estado }}</td>
+          <td> {{ ip.pais.nombre }}</td>
+          <td> {{ ip.usuario }}</td>
+          <td> {{ ip.firewall }}</td>
+          <td> {{ ip.ataques }}</td>
+          <td> {{ ip.peticiones }}</td>
+          <td> {{ ip.fecha.date }}</td>
+          <td class="acciones"> 
+            <a href="{% url 'modificar' id=ip.id rutaRetorno=rutaRetorno %}" class="modificar">
+                <i class="fas fa-edit" title="Editar"></i><span class="sr-only">Editar</span>
+            </a>       
+            <a href="{% url 'eliminar' id=ip.id rutaRetorno=rutaRetorno %}"  class="eliminada">
+                <i class="fas fa-trash-alt" title="Eliminar"></i><span class="sr-only">Eliminar</span>
+            </a>
+            <a href="{% url 'anadirANegra' id=ip.id rutaRetorno=rutaRetorno %}" class="bloquear">
+                <i class="fas fa-lock" title="Bloquear"></i><span class="sr-only">Bloquear</span>
+            </a>
+            <a href="{% url 'añadirABlanca' id=ip.id rutaRetorno=rutaRetorno %}"  class="exonerar">
+                <i class="fas fa-unlock" title="Exonerar"></i><span class="sr-only">Exonerar</span>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+    </table>      
+</div>
+
+{% endblock %}
+
+{% block modales %}
+<div class="modal" id="modalForm1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Ingrese el archivo Excel</h4>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form action="#" method="post" class="entrada" enctype="multipart/form-data">
+                    {% csrf_token %}          
+                    <div class="input-group mb-3 ">
+                        <div class="custom-file">
+                            <input type="file" class="custom-file-input" id="archivo" name="archivoEntrada">
+                            <label class="custom-file-label" for="archivo" aria-describedby="inputGroupFileAddon02">Seleccione el archivo a procesar</label>    
+                        </div>
+                        <div class="input-group-append">
+                            <button class="input-group-text" id="inputGroupFileAddon02" type="submit">Cargar</button>
+                        </div>
+                    </div>  
+                    <div class="mb-3 ">
+                        <div class="form-check">
+                            <input class="form-check-input checkbox-unico" type="radio" name="tipoEntrada" id="exampleRadios1" value="option1" checked>
+                            <label class="form-check-label" for="exampleRadios1">
+                                Documento Estructurado
+                            </label>
+                          </div>
+                          <div class="form-check">
+                            <input class="form-check-input checkbox-unico" type="radio" name="tipoEntrada" id="exampleRadios2" value="option2">
+                            <label class="form-check-label" for="exampleRadios2">
+                                Solo IPs
+                            </label>
+                          </div>
+                    </div>                            
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="modalForm2">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Ingrese la dirección IP</h4>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form action="{% url 'anadirIndividual' %}" method="post" class="entrada" >
+                    {% csrf_token %}          
+                    <div class="mb-3">
+                        <input type="text" class="form-control" name="ipIndividual" placeholder="Ingrese la Ip a verificar">
+                    </div>
+                    
+                    <label>
+                        <input type="checkbox" id="mostrarInputs" name="filtros_agregados"> Establecer Bloqueo Temporal
+                    </label>
+
+                    <div id="filtros" class="filtros row" style="display: none;"> 
+                        <div class="col-md-6 mb-3">
+                            <label for="fecha">Fecha Inicio</label>
+                            <input type="date" id="fechaInicio" name="fechaInicio" class="form-control">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="fecha">Fecha fin</label>
+                            <input type="date" id="fechaFin" name="fechaFin" class="form-control">
+                        </div>       
+                    </div>
+
+                    <button class="btn btn-primary w-100 py-2" type="button" id="button-addon2">Ingresar</button>                                    
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- <script>
+    const checkboxes = document.querySelectorAll('.checkbox-unico');
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            // Si el checkbox actual está marcado, desmarca los demás
+            if (this.checked) {
+                checkboxes.forEach(otherCheckbox => {
+                    if (otherCheckbox !== this) {
+                        otherCheckbox.checked = false;
+                    }
+                });
+            }
+        });
+    });
+</script>-->
+
+<script>
+    $(document).ready(function(){
+        $("#button-addon2").click(function(){
+            $(".entrada").submit();
+        });
+    });
+</script>
+
+<!-- <script>
+document.addEventListener("DOMContentLoaded", function () {
+    const checkbox = document.querySelectorAll('.fila-checkbox');
+    const btnEjecutarAccion = document.getElementById('btn-ejecutar-accion');
+    const selectAcciones = document.getElementById('select-acciones');
+
+    btnEjecutarAccion.addEventListener('click', function () {
+        const accionSeleccionada = selectAcciones.value;
+        const idsSeleccionados = Array.from(checkbox)
+            .filter(cb => cb.checked)
+            .map(cb => cb.value);
+
+        if (accionSeleccionada && idsSeleccionados.length > 0) {
+            const csrftoken = getCookie('csrftoken');
+
+            fetch('/detectorIP/accionesMultiples/', {
+                method: 'POST',
+                body: JSON.stringify({ ids: idsSeleccionados, accion: accionSeleccionada }),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                }
+            }).then(response => {               
+                if (response.ok) {
+                    window.location.href = '/detectorIP/';
+                } else {
+                    console.error('Error en la solicitud AJAX');
+                }
+            }).catch(error => {
+                console.error('Error:', error);
+            });
+
+            // Función para obtener el valor del cookie CSRF
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+        } else {
+            console.log('Seleccione una acción y al menos una fila.');
+        }
+    });
+});
+
+</script> -->
+
+<script>
+    $(document).ready(function () {
+        let campoInput = $('#filtros');
+        let fechaInicioInput = $('#fechaInicio');
+        let fechaFinInput = $('#fechaFin');
+
+        $("#mostrarInputs").change(function () {
+            if ($(this).is(':checked')) {
+                campoInput.show();
+                fechaInicioInput.prop('required', true); // Hacer que el campo de fecha de inicio sea obligatorio
+                fechaFinInput.prop('required', true); // Hacer que el campo de fecha de fin sea obligatorio
+            } else {
+                campoInput.hide();
+                fechaInicioInput.prop('required', false); // Hacer que el campo de fecha de inicio no sea obligatorio
+                fechaFinInput.prop('required', false); // Hacer que el campo de fecha de fin no sea obligatorio
+            }
+        });
+    });
+</script>
+
+{% endblock %}   

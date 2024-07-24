@@ -1,0 +1,15 @@
+.centrado {
+    background-color: #343a40;
+    color: white;
+    padding: 20px 50px;
+    border-radius: 15px;
+    width: 40%;
+    height: auto;
+    margin: 5% 30% auto 30%;
+    align-items: center;
+}
+
+svg { 
+    color: white;
+    margin-right: 20px;
+}
