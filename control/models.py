@@ -3,6 +3,15 @@ from datetime import datetime
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.db.models import UniqueConstraint
+from django.contrib.auth.models import User
+import pyotp
+
+
+#=============================================================================================
+#                 Modelo generado para el 2FA
+#=============================================================================================
+
+User.add_to_class('otp_secret', models.CharField(max_length=16, blank=True, null=True))
 
 #=============================================================================================
 #                 Modelos generados para control de IPs
@@ -43,6 +52,13 @@ class IP(models.Model):
         ("No Bloqueado","No Bloqueado"),
         ("Nuevo","Nuevo"),
     )
+    fuentes = (
+        ("SOC","SOC"),
+        ("Fuentes de Inteligencia","Fuentes de Inteligencia"),
+        ("Pentesting","Pentesting"),
+        ("Ejercicios SI","Ejercicios SI"),
+        ("Desconocido","Desconocido"),
+    )
     ip = models.CharField(max_length=20 , unique=True)
     estado = models.CharField(max_length=100 , choices=estados , default="Nuevo")
     malicioso = models.IntegerField(null=True)
@@ -56,6 +72,7 @@ class IP(models.Model):
     firewall = models.CharField(max_length=5, choices=fw , default= "NO")
     usuario = models.CharField(max_length=100 , null=True)
     fecha = models.DateTimeField(null=True , default=datetime.now())
+    fuente = models.CharField(max_length=100 , choices=fuentes , default="Desconocido")
 
     def __str__(self):
         return self.ip
@@ -99,6 +116,13 @@ class Casos_Especiales(models.Model):
     def set_firewall_to_no(self):
         self.ipEspecial.firewall = 'NO'
         self.ipEspecial.save()
+
+class RangoExonerado(models.Model):
+    ipInicio = models.CharField(max_length=15, null=False)
+    ipFin = models.CharField(max_length=15, null=False)
+
+    def __str__(self):
+        return f"{self.ipInicio} - {self.ipFin}"
 
 class Logs(models.Model):
     acciones = (

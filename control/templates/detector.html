@@ -28,12 +28,17 @@
             Subir Archivo
         </button>
 
-         <!-- Segundo botón y modal -->
+        <!-- Segundo botón y modal -->
          <button type="button" class="btn btn-primary mb-2" data-toggle="modal" data-target="#modalForm2">
             Ingresar Manual
         </button>
 
-        <!-- Tercer botón y funcion -->
+        <!-- Tercer botón y modal -->
+        <button type="button" class="btn btn-primary mb-2" data-toggle="modal" data-target="#modalForm3">
+            Exonerar Rango IPs
+        </button>
+
+        <!-- Cuarto botón y funcion -->
         <a type="button" class="btn btn-primary mb-2" href="{% url 'exportar' tipo=1 %}"> <!-- data-toggle="modal" data-target="#modalForm2"> -->
             Exportar IPs
         </a>
@@ -58,6 +63,7 @@
             <th>#</th>-->
             <th>IP</th>
             <th>Dominio</th>
+            <th>Fuente</th>
             <th>Malicioso</th>
             <th>Estado</th>
             <th>País</th>
@@ -75,6 +81,7 @@
           <td></td>-->
           <td> {{ ip.ip }}</td>
           <td> {{ ip.dominio.nomDominio }}</td>
+          <td> {{ ip.fuente }}</td>
           <td> {{ ip.malicioso }}</td>
           <td> {{ ip.estado }}</td>
           <td> {{ ip.pais.nombre }}</td>
@@ -114,7 +121,7 @@
             </div>
             <div class="modal-body">
                 <form action="#" method="post" class="entrada" enctype="multipart/form-data">
-                    {% csrf_token %}          
+                    {% csrf_token %}                      
                     <div class="input-group mb-3 ">
                         <div class="custom-file">
                             <input type="file" class="custom-file-input" id="archivo" name="archivoEntrada">
@@ -123,7 +130,19 @@
                         <div class="input-group-append">
                             <button class="input-group-text" id="inputGroupFileAddon02" type="submit">Cargar</button>
                         </div>
-                    </div>  
+                    </div>   
+                    <div class="input-group mb-3">
+                        <div class="input-group-prepend">
+                          <label class="input-group-text" for="inputGroupSelect01">Fuente</label>
+                        </div>
+                        <select class="custom-select" id="inputGroupSelect01" name="fuente">
+                          <option selected>Desconocido</option>
+                          <option value="SOC">SOC</option>
+                          <option value="Fuentes de Inteligencia">Fuentes de Inteligencia</option>
+                          <option value="Pentesting">Pentesting</option>
+                          <option value="Ejercicios SI">Ejercicios SI</option>
+                        </select>
+                    </div>                  
                     <div class="mb-3 ">
                         <div class="form-check">
                             <input class="form-check-input checkbox-unico" type="radio" name="tipoEntrada" id="exampleRadios1" value="option1" checked>
@@ -161,6 +180,19 @@
                         <input type="text" class="form-control" name="ipIndividual" placeholder="Ingrese la Ip a verificar">
                     </div>
                     
+                    <div class="input-group mb-3">
+                        <div class="input-group-prepend">
+                          <label class="input-group-text" for="inputGroupSelect01">Fuente</label>
+                        </div>
+                        <select class="custom-select" id="inputGroupSelect01" name="fuente">
+                          <option selected>Desconocido</option>
+                          <option value="SOC">SOC</option>
+                          <option value="Fuentes de Inteligencia">Fuentes de Inteligencia</option>
+                          <option value="Pentesting">Pentesting</option>
+                          <option value="Ejercicios SI">Ejercicios SI</option>
+                        </select>
+                    </div> 
+
                     <label>
                         <input type="checkbox" id="mostrarInputs" name="filtros_agregados"> Establecer Bloqueo Temporal
                     </label>
@@ -177,6 +209,32 @@
                     </div>
 
                     <button class="btn btn-primary w-100 py-2" type="button" id="button-addon2">Ingresar</button>                                    
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="modalForm3">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Ingrese un rango de exoneracion de IPs</h4>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form action="{% url 'ingresarRangoIps' %}" method="post" class="rango" >
+                    {% csrf_token %}  
+                    <div class="mb-3">
+                        <input type="text" class="form-control" name="ipInicio" placeholder="Ingrese la IP incio">
+                    </div>
+                    <div class="mb-3">
+                        <input type="text" class="form-control" name="ipFin" placeholder="Ingrese la Ip fin">
+                    </div>
+                    <button class="btn btn-primary w-100 py-2" type="button" id="button-addon3">Ingresar</button>   
                 </form>
             </div>
             <div class="modal-footer">
@@ -207,6 +265,12 @@
     $(document).ready(function(){
         $("#button-addon2").click(function(){
             $(".entrada").submit();
+        });
+    });
+
+    $(document).ready(function(){
+        $("#button-addon3").click(function(){
+            $(".rango").submit();
         });
     });
 </script>

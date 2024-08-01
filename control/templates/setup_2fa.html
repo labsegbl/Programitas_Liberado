@@ -1,0 +1,18 @@
+{% extends 'sidebar.html' %}
+{% load static %}
+
+{% block estilos %}
+<link href="{% static 'css/inicio.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+
+  <div class="container">
+    <br><h1>Codigo de activación de 2FA</h1><hr><br>
+    <p>{{request.user}}, asegurate de no compartir tu codigo con nadie</p><hr>
+
+    <img src="{{ qr_code_url }}" alt="2FA QR Code">
+
+  </div>
+
+{% endblock %}

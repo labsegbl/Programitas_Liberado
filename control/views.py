@@ -1,6 +1,6 @@
 from collections import defaultdict
 from datetime import datetime
-import os , csv , json , openpyxl , requests , io
+import os , csv , json , openpyxl , requests , io , re, ipaddress
 import pandas as pd
 from time import sleep
 from urllib.parse import quote, unquote_plus
@@ -32,6 +32,15 @@ from selenium.webdriver.support.ui import Select, WebDriverWait
 from .forms import *
 from .models import *
 from .resources import *
+
+#=============================================================
+#                  REVISAR
+#=============================================================
+
+import pyotp , qrcode , threading
+from io import BytesIO
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 
 #Redireccionamiento a las platillas de html que se crearon 
 def index(request , mensaje=None): #Plantilla de logeo para los usuarios 
@@ -69,9 +78,15 @@ def validarUsuario(request): #Función para validar los usuarios al momento de l
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
+        otp_code = request.POST.get('otp_code' , None)
         user = authenticate(request, username=username, password=password) # Verificamos al usuario y lo autenticamos si las credenciales son correctas
-
+        
         if user is not None:
+            if user.otp_secret:
+                totp = pyotp.TOTP(user.otp_secret)
+                if not totp.verify(otp_code):
+                    return render(request, 'login.html' , {'error': "El código OTP es incorrecto."})
+
             login(request, user) # Se logeea el usuario, este hace uso de cookies para navegar entre las paginas
             return redirect('inicio') # Se redirecciona a la pagina principal
         else:
@@ -83,7 +98,159 @@ def signout(request): # Función para cerrar seción y se borre las cookies de c
     logout(request=request)
     return redirect('index')
 
+"""@login_required
+def setup_2fa(request):
+    user = request.user
+    if not user.otp_secret:
+        # Genera un nuevo secreto
+        totp = pyotp.TOTP(pyotp.random_base32())
+        user.otp_secret = totp.secret
+        user.save()
+    
+    # Genera el código QR
+    totp = pyotp.TOTP(user.otp_secret)
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    uri = totp.provisioning_uri(name=user.email, issuer_name='ProgramitasSI')
+    qr.add_data(uri)
+    qr.make(fit=True)
+    img = qr.make_image(fill='black', back_color='white')
+    
+    # Guardar la imagen en un archivo temporal
+    buffer = BytesIO()
+    img.save(buffer, format='PNG')
+    buffer.seek(0)
+    
+    # Define the file path
+    file_name = f'qr_code_{user.id}.png'
+    file_path = os.path.join(settings.MEDIA_ROOT, file_name)
+    
+    # Create the media directory if it does not exist
+    if not os.path.exists(settings.MEDIA_ROOT):
+        os.makedirs(settings.MEDIA_ROOT)
+    
+    # Write the image to the file
+    with open(file_path, 'wb') as f:
+        f.write(buffer.getvalue())
+    
+    # Generate the URL for the image
+    qr_code_url = os.path.join(settings.MEDIA_URL, file_name)
+    
+    context = {'qr_code_url': qr_code_url}
+    return render(request, 'setup_2fa.html', context)"""
 
+def delete_file(file_path):
+    """ Elimina el archivo en la ruta especificada. """
+    if os.path.isfile(file_path):
+        os.remove(file_path)
+
+@login_required
+def setup_2fa(request):
+    user = request.user
+    if not user.otp_secret:
+        # Genera un nuevo secreto
+        totp = pyotp.TOTP(pyotp.random_base32())
+        user.otp_secret = totp.secret
+        user.save()
+    
+    # Genera el código QR
+    totp = pyotp.TOTP(user.otp_secret)
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    uri = totp.provisioning_uri(name=user.email, issuer_name='ProgramitasSI')
+    qr.add_data(uri)
+    qr.make(fit=True)
+    img = qr.make_image(fill='black', back_color='white')
+    
+    # Guardar la imagen en un archivo temporal
+    buffer = BytesIO()
+    img.save(buffer, format='PNG')
+    buffer.seek(0)
+    
+    file_name = f'qr_code_{user.id}.png'
+    file_path = os.path.join(settings.MEDIA_ROOT, file_name)
+    
+    if not os.path.exists(settings.MEDIA_ROOT):
+        os.makedirs(settings.MEDIA_ROOT)
+    
+    # Escribir el archivo
+    with open(file_path, 'wb') as f:
+        f.write(buffer.getvalue())
+    
+    # URL del código QR
+    qr_code_url = os.path.join(settings.MEDIA_URL, file_name)
+    
+    # Eliminar el archivo después de 30 segundos
+    def delete_file_task():
+        import time
+        time.sleep(30)
+        delete_file(file_path)
+    
+    threading.Thread(target=delete_file_task).start()
+    
+    context = {'qr_code_url': qr_code_url}
+    return render(request, 'setup_2fa.html', context)
+#=============================================================================================
+#                 Funciones para las visualizaciones de IPs Amenaza
+#=============================================================================================
+
+regex = "^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$"
+
+@login_required
+def validarIPValida(request, ip):  # Función para determinar si una ip es valida o no 
+    return True if(re.search(regex, ip)) else False
+
+@login_required
+def ipEsMayor(request, mayor, menor):
+    ip1 = ipaddress.ip_address(mayor)
+    ip2 = ipaddress.ip_address(menor)
+
+    try:  # Comparar las direcciones IP      
+        if ip1 > ip2:
+            return True
+        elif ip1 < ip2:
+            return False
+        else:
+            return False
+    except ValueError as e:
+        return f"Error en la dirección IP: {e}" 
+
+@login_required
+def ingresarRangoIps(request):
+    if request.method == 'POST':
+        ips = IP.objects.all()
+        ipInicio = str(request.POST['ipInicio']).strip()
+        ipFin = str(request.POST['ipFin']).strip()
+
+        if validarIPValida(request, ipInicio) and validarIPValida(request, ipFin):
+            if (ipEsMayor(request,ipFin, ipInicio)):
+                RangoExonerado.objects.create(ipInicio=ipInicio ,ipFin=ipFin)
+            else:
+                RangoExonerado.objects.create(ipInicio=ipFin,ipFin=ipInicio)
+            return render(request, "detector.html", {'ips': ips , 'rutaRetorno': urlencode({'rutaRetorno': request.path}),'exito': "El rango de IPs se ingreso con exito"})
+        else:       
+            return render(request, "detector.html", {'ips': ips , 'rutaRetorno': urlencode({'rutaRetorno': request.path}),'error': "Las IPs ingresadas no son validas"})  
+
+def seEncuentraEnRango( ip):
+    ipVal = ipaddress.ip_address(ip)
+    rangos = RangoExonerado.objects.all()
+
+    for rango in rangos:
+        ipIni = ipaddress.ip_address(rango.ipInicio)
+        ipFin = ipaddress.ip_address(rango.ipFin)
+
+        if (ipIni<=ipVal and ipVal<=ipFin):
+            return True
+    
+    return False
 #=============================================================================================
 #                 Funciones para las visualizaciones de IPs Amenaza
 #=============================================================================================
@@ -127,7 +294,7 @@ def mandarACasosEspeciales(request, ip , caso): #Función para controlar casos e
         ipEspeciales.save() #Creamos un caso especial con esta direccion IP
 
 @login_required
-def ingresarNueva(request , ip , opcion='option2' , row=None):
+def ingresarNueva(request , ip , fuente , opcion='option2' , row=None):
     try:
         decodedResponse = obtenerDatosDeAbuse(ip) #Traemos los datos de abuse
         pais = decodedResponse["data"]["countryCode"] # Formateamos los datos en base a las respuestas traidas por el Abuse
@@ -159,15 +326,14 @@ def ingresarNueva(request , ip , opcion='option2' , row=None):
 
         else: # Se crea la nueva direccion IP       
             if opcion == 'option1': # En caso que la entrada del excel tenga formato
-                print("La ip entor al if")
                 nuevaIP = IP(ip=ip , estado="Bloqueado", malicioso=malicioso, isp=isp,
                             tipoUso=tipoUso , pais=objetoPais, dominio=objectoDominio,
                             ataques=row[3], descripcion=row[4], peticiones=int(row[5]),
-                            firewall="NO", usuario=request.user.username)
+                            firewall="NO", usuario=request.user.username, fuente=fuente)
             else : # Si el escel de ingreso solo tiene IPs
                 nuevaIP = IP(ip=ip , estado="Bloqueado", malicioso=malicioso, isp=isp,
                             tipoUso=tipoUso , pais=objetoPais, dominio=objectoDominio,
-                            firewall="NO", usuario=request.user.username)
+                            firewall="NO", usuario=request.user.username, fuente=fuente)
             nuevaIP.save()
 
             if DominioPermitido.objects.filter(nomDominio=objectoDominio).exists(): #Si la Ip se encuentra en un dominio permitido se asigna un estado de No Bloqueo
@@ -175,6 +341,12 @@ def ingresarNueva(request , ip , opcion='option2' , row=None):
                 nuevaIP.estado = "No Bloqueado"
                 nuevaIP.save()
                 ipEspeciales = Casos_Especiales(ipEspecial = nuevaIP , razon = "Ip con Dominio Exonerado")
+                ipEspeciales.save() #Creamos un caso especial con esta direccion IP
+            elif seEncuentraEnRango(ip):
+                print("Ingreso en un rango exonerado")
+                nuevaIP.estado = "No Bloqueado"
+                nuevaIP.save()
+                ipEspeciales = Casos_Especiales(ipEspecial = nuevaIP , razon = "Ip con Rango Exonerado")
                 ipEspeciales.save() #Creamos un caso especial con esta direccion IP
             else:    
                 print("Ingreso al Bloqueo")    
@@ -188,7 +360,7 @@ def ingresarNueva(request , ip , opcion='option2' , row=None):
         return ip
 
 @login_required
-def leer_archivo(request, archivo_subido, tipo_entrada): #Función para tratar los archivos subidos 
+def leer_archivo(request, archivo_subido, tipo_entrada, fuente): #Función para tratar los archivos subidos 
     ipsConError = [] # Una lista para tomar las ips que no se pudieron ingresar e informar de ello 
     if archivo_subido.name.endswith('.xlsx'): # En caso de ser archivo de excel 
         try:
@@ -199,7 +371,7 @@ def leer_archivo(request, archivo_subido, tipo_entrada): #Función para tratar l
             for row in filas:
                 try:
                     ip = row[0] # Tomamos el campo de IP y lo mandamos a ingresar a la DB
-                    ingreso = ingresarNueva(request, ip, tipo_entrada, row) # Sigue el proceso para verificar el estado que asume 
+                    ingreso = ingresarNueva(request, ip, fuente, tipo_entrada, row) # Sigue el proceso para verificar el estado que asume 
                 except Exception as e:
                     print(f'Error al analizar IP: {str(e)}')
 
@@ -212,7 +384,7 @@ def leer_archivo(request, archivo_subido, tipo_entrada): #Función para tratar l
                 ip = linea.decode('utf-8').strip() # Decodificamos el archivo con utf-8 para evitar el cambio o aumento de caracteres 
                 print(ip) 
                 try:
-                    ingreso = ingresarNueva(request, ip) # Mandamos a ingresar la IP
+                    ingreso = ingresarNueva(request, ip, fuente) # Mandamos a ingresar la IP
                 except:
                     pass
 
@@ -229,9 +401,10 @@ def detector(request): # Pagina render del visualizador de IPs
     if request.method == 'POST':
         archivo_subido = request.FILES['archivoEntrada'] # Tomamos el archivo de IPs 
         tipo_entrada = request.POST['tipoEntrada']
+        fuente = request.POST['fuente']
 
         if archivo_subido.name.endswith('.xlsx') or archivo_subido.name.endswith('.txt'): # Verificamos que el archivo sea excel o txt caso contrario no lo procesara 
-            ipsConError = leer_archivo(request, archivo_subido, tipo_entrada) # Mandamos a leer el archivo y traemos las IPs que no se pudieron procesar 
+            ipsConError = leer_archivo(request, archivo_subido, tipo_entrada , fuente) # Mandamos a leer el archivo y traemos las IPs que no se pudieron procesar 
             ips = IP.objects.all() # Actualizamos las IPs de casos especiales para que el usuario pueda asignarles un estado 
 
             if len(ipsConError)> 0: # Organizamos el mensaje final de usuario en caso de que no se puedan procesar las IPs 
@@ -291,7 +464,8 @@ def anadirIndividual(request): # Función para el ingreso de IPs de forma manual
     if request.method == 'POST':
         try:
             ip = str(request.POST['ipIndividual']).strip() # Se toma la dirección IP
-            verificacion = ingresarNueva(request , ip) # Se manda a ingresar la IP y que esta siga toda la verificación en la función 
+            fuente = request.POST['fuente']
+            verificacion = ingresarNueva(request , ip, fuente) # Se manda a ingresar la IP y que esta siga toda la verificación en la función 
 
             if request.POST.get('filtros_agregados') == 'on': #Agregamos la función de bloqueo temporal en caso de estar activado el parametro 
                 ipPermitida = Historial_IP_FW_Permitidas.objects.filter(ipPermitida=IP.objects.filter(ip=ip)[0])
