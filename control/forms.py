@@ -29,3 +29,5 @@ class Historial_IP_FW_PermitidasForm(forms.ModelForm):
             'descripcion': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
+class OTPVerificationForm(forms.Form):
+    otp_code = forms.CharField(max_length=6, label='Código de Verificación')

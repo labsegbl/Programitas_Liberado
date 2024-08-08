@@ -15,7 +15,6 @@ admin.site.register(Casos_Especiales)
 admin.site.register(BloqueadasTemporales)
 admin.site.register(RangoExonerado)
 
-
 class UserAdmin(DefaultUserAdmin):
     model = User
 

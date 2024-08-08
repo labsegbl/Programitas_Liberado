@@ -46,21 +46,24 @@
     </div>
   
     <h4 style="background-color: #343a40; border-radius: 10px; color: white; padding-left: 20px;"><strong>Listado de IPs</strong></h4><hr>
-    <!--<div class="accionesMultiples">
+    <div class="accionesMultiples">
         <select id="select-acciones" class="form-control">
             <option value="" disabled selected>Seleccione una acción</option>
             <option value="eliminar">Eliminar</option>
             <option value="bloquear">Bloquear</option>
             <option value="exonerar">Exonerar</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="noBloquear">No Bloquear</option>
+            <option value="quitar">Quitar</option>
         </select>
         <button id="btn-ejecutar-accion" class="btn btn-primary">Ejecutar Acción</button>
-    </div>-->
+      </div>
     
     <table id="tabla_datos" class="table table-striped table-bordered" style="width:100%">
         <thead>
           <tr>
-            <!--<th></th>
-            <th>#</th>-->
+            <th></th>
+            <!--<th>#</th>-->
             <th>IP</th>
             <th>Dominio</th>
             <th>Fuente</th>
@@ -77,8 +80,8 @@
         </thead> 
         {% for ip in ips %}
         <tr>
-          <!--<td><input type="checkbox" class="fila-checkbox" value="{{ ip.id }}"></td>
-          <td></td>-->
+          <td><input type="checkbox" class="fila-checkbox" value="{{ ip.id }}"></td>
+          <!--<td></td>-->
           <td> {{ ip.ip }}</td>
           <td> {{ ip.dominio.nomDominio }}</td>
           <td> {{ ip.fuente }}</td>
@@ -177,7 +180,8 @@
                 <form action="{% url 'anadirIndividual' %}" method="post" class="entrada" >
                     {% csrf_token %}          
                     <div class="mb-3">
-                        <input type="text" class="form-control" name="ipIndividual" placeholder="Ingrese la Ip a verificar">
+                        <input type="text" class="form-control" id="ipIndividual" name="ipIndividual" placeholder="Ingrese la Ip a verificar" required>
+                        <div id="ipError" class="text-danger" style="display: none;">La dirección IP ingresada no es válida.</div>
                     </div>
                     
                     <div class="input-group mb-3">
@@ -275,60 +279,60 @@
     });
 </script>
 
-<!-- <script>
-document.addEventListener("DOMContentLoaded", function () {
-    const checkbox = document.querySelectorAll('.fila-checkbox');
-    const btnEjecutarAccion = document.getElementById('btn-ejecutar-accion');
-    const selectAcciones = document.getElementById('select-acciones');
-
-    btnEjecutarAccion.addEventListener('click', function () {
-        const accionSeleccionada = selectAcciones.value;
-        const idsSeleccionados = Array.from(checkbox)
-            .filter(cb => cb.checked)
-            .map(cb => cb.value);
-
-        if (accionSeleccionada && idsSeleccionados.length > 0) {
-            const csrftoken = getCookie('csrftoken');
-
-            fetch('/detectorIP/accionesMultiples/', {
-                method: 'POST',
-                body: JSON.stringify({ ids: idsSeleccionados, accion: accionSeleccionada }),
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrftoken
-                }
-            }).then(response => {               
-                if (response.ok) {
-                    window.location.href = '/detectorIP/';
-                } else {
-                    console.error('Error en la solicitud AJAX');
-                }
-            }).catch(error => {
-                console.error('Error:', error);
-            });
-
-            // Función para obtener el valor del cookie CSRF
-            function getCookie(name) {
-                let cookieValue = null;
-                if (document.cookie && document.cookie !== '') {
-                    const cookies = document.cookie.split(';');
-                    for (let i = 0; i < cookies.length; i++) {
-                        const cookie = cookies[i].trim();
-                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                            break;
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const checkbox = document.querySelectorAll('.fila-checkbox');
+        const btnEjecutarAccion = document.getElementById('btn-ejecutar-accion');
+        const selectAcciones = document.getElementById('select-acciones');
+    
+        btnEjecutarAccion.addEventListener('click', function () {
+            const accionSeleccionada = selectAcciones.value;
+            const idsSeleccionados = Array.from(checkbox)
+                .filter(cb => cb.checked)
+                .map(cb => cb.value);
+    
+            if (accionSeleccionada && idsSeleccionados.length > 0) {
+                const csrftoken = getCookie('csrftoken');
+    
+                fetch('/detectorIP/accionesMultiples/', {
+                    method: 'POST',
+                    body: JSON.stringify({ ids: idsSeleccionados, accion: accionSeleccionada }),
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    }
+                }).then(response => {               
+                    if (response.ok) {
+                        window.location.href = '/detectorIP/';
+                    } else {
+                        console.error('Error en la solicitud AJAX');
+                    }
+                }).catch(error => {
+                    console.error('Error:', error);
+                });
+    
+                // Función para obtener el valor del cookie CSRF
+                function getCookie(name) {
+                    let cookieValue = null;
+                    if (document.cookie && document.cookie !== '') {
+                        const cookies = document.cookie.split(';');
+                        for (let i = 0; i < cookies.length; i++) {
+                            const cookie = cookies[i].trim();
+                            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                                break;
+                            }
                         }
                     }
+                    return cookieValue;
                 }
-                return cookieValue;
+            } else {
+                console.log('Seleccione una acción y al menos una fila.');
             }
-        } else {
-            console.log('Seleccione una acción y al menos una fila.');
-        }
+        });
     });
-});
-
-</script> -->
+    
+  </script>
 
 <script>
     $(document).ready(function () {
@@ -350,4 +354,33 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 </script>
 
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const ipInput = document.getElementById('ipIndividual');
+        const ipError = document.getElementById('ipError');
+        const submitButton = document.getElementById('button-addon2');
+    
+        function isValidIP(ip) {
+            const ipRegex = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+            return ipRegex.test(ip);
+        }
+    
+        function validateIP() {
+            const ipValue = ipInput.value;
+            if (isValidIP(ipValue)) {
+                ipError.style.display = 'none';
+                submitButton.disabled = false;
+            } else {
+                ipError.style.display = 'block';
+                submitButton.disabled = true;
+            }
+        }
+    
+        ipInput.addEventListener('input', validateIP);
+    
+        // Initial validation in case the field is pre-filled
+        validateIP();
+    });
+</script>
+    
 {% endblock %}   

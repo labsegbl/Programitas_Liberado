@@ -1,5 +1,6 @@
 from collections import defaultdict
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
 import os , csv , json , openpyxl , requests , io , re, ipaddress
 import pandas as pd
 from time import sleep
@@ -11,6 +12,7 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.views import LoginView
 from django.contrib.auth.models import User
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
@@ -41,6 +43,7 @@ import pyotp , qrcode , threading
 from io import BytesIO
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
+from django.views.generic import TemplateView
 
 #Redireccionamiento a las platillas de html que se crearon 
 def index(request , mensaje=None): #Plantilla de logeo para los usuarios 
@@ -78,12 +81,12 @@ def validarUsuario(request): #Función para validar los usuarios al momento de l
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
-        otp_code = request.POST.get('otp_code' , None)
+        otp_code = request.POST.get('otp_code' , None) # Codigo de 2FA en caso de existir 
         user = authenticate(request, username=username, password=password) # Verificamos al usuario y lo autenticamos si las credenciales son correctas
         
         if user is not None:
             if user.otp_secret:
-                totp = pyotp.TOTP(user.otp_secret)
+                totp = pyotp.TOTP(user.otp_secret) # Encuentra el usuario y busca el código OTP correspondiente y analiza si es correcto
                 if not totp.verify(otp_code):
                     return render(request, 'login.html' , {'error': "El código OTP es incorrecto."})
 
@@ -98,68 +101,20 @@ def signout(request): # Función para cerrar seción y se borre las cookies de c
     logout(request=request)
     return redirect('index')
 
-"""@login_required
-def setup_2fa(request):
-    user = request.user
-    if not user.otp_secret:
-        # Genera un nuevo secreto
-        totp = pyotp.TOTP(pyotp.random_base32())
-        user.otp_secret = totp.secret
-        user.save()
-    
-    # Genera el código QR
-    totp = pyotp.TOTP(user.otp_secret)
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_L,
-        box_size=10,
-        border=4,
-    )
-    uri = totp.provisioning_uri(name=user.email, issuer_name='ProgramitasSI')
-    qr.add_data(uri)
-    qr.make(fit=True)
-    img = qr.make_image(fill='black', back_color='white')
-    
-    # Guardar la imagen en un archivo temporal
-    buffer = BytesIO()
-    img.save(buffer, format='PNG')
-    buffer.seek(0)
-    
-    # Define the file path
-    file_name = f'qr_code_{user.id}.png'
-    file_path = os.path.join(settings.MEDIA_ROOT, file_name)
-    
-    # Create the media directory if it does not exist
-    if not os.path.exists(settings.MEDIA_ROOT):
-        os.makedirs(settings.MEDIA_ROOT)
-    
-    # Write the image to the file
-    with open(file_path, 'wb') as f:
-        f.write(buffer.getvalue())
-    
-    # Generate the URL for the image
-    qr_code_url = os.path.join(settings.MEDIA_URL, file_name)
-    
-    context = {'qr_code_url': qr_code_url}
-    return render(request, 'setup_2fa.html', context)"""
-
-def delete_file(file_path):
-    """ Elimina el archivo en la ruta especificada. """
+def delete_file(file_path): # Función que borra las imagenes de los codigos QR de OTP
     if os.path.isfile(file_path):
         os.remove(file_path)
 
 @login_required
-def setup_2fa(request):
+def setup_2fa(request): # Fución para activar y generar el 2FA con OTP, muestra el código en pantalla
     user = request.user
-    if not user.otp_secret:
-        # Genera un nuevo secreto
-        totp = pyotp.TOTP(pyotp.random_base32())
-        user.otp_secret = totp.secret
+    if not user.otp_secret:   
+        totp = pyotp.TOTP(pyotp.random_base32()) # Genera un nuevo código secreto si este no existe
+        user.otp_secret = totp.secret # Lo guarda en la variable de usuario otp_secret
         user.save()
     
-    # Genera el código QR
-    totp = pyotp.TOTP(user.otp_secret)
-    qr = qrcode.QRCode(
+    totp = pyotp.TOTP(user.otp_secret) # Genera el código QR
+    qr = qrcode.QRCode( # Genera la imagen del QR y se establecen los parametros para que se integren en la imagen.
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_L,
         box_size=10,
@@ -170,50 +125,48 @@ def setup_2fa(request):
     qr.make(fit=True)
     img = qr.make_image(fill='black', back_color='white')
     
-    # Guardar la imagen en un archivo temporal
-    buffer = BytesIO()
+    buffer = BytesIO() # Guardar la imagen en un archivo temporal
     img.save(buffer, format='PNG')
     buffer.seek(0)
     
-    file_name = f'qr_code_{user.id}.png'
+    file_name = f'qr_code_{user.id}.png' # Guarda la imagen en un archivo de la carpeta de media 
     file_path = os.path.join(settings.MEDIA_ROOT, file_name)
     
     if not os.path.exists(settings.MEDIA_ROOT):
         os.makedirs(settings.MEDIA_ROOT)
     
-    # Escribir el archivo
-    with open(file_path, 'wb') as f:
+    with open(file_path, 'wb') as f: # Escribe la imagen en el directorio
         f.write(buffer.getvalue())
     
     # URL del código QR
     qr_code_url = os.path.join(settings.MEDIA_URL, file_name)
-    
-    # Eliminar el archivo después de 30 segundos
-    def delete_file_task():
+      
+    def delete_file_task():# Eliminar la imagen de QR después de 30 segundos
         import time
         time.sleep(30)
         delete_file(file_path)
     
-    threading.Thread(target=delete_file_task).start()
+    threading.Thread(target=delete_file_task).start() # Se ejecuta la operación en paralelo 
     
     context = {'qr_code_url': qr_code_url}
     return render(request, 'setup_2fa.html', context)
+
 #=============================================================================================
 #                 Funciones para las visualizaciones de IPs Amenaza
 #=============================================================================================
 
-regex = "^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$"
+regex = "^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$" # Formula regex para validar que una IP sea valida
 
 @login_required
 def validarIPValida(request, ip):  # Función para determinar si una ip es valida o no 
     return True if(re.search(regex, ip)) else False
 
 @login_required
-def ipEsMayor(request, mayor, menor):
+def ipEsMayor(request, mayor, menor): # Función para determinar si una ip es mayor a otra 
     ip1 = ipaddress.ip_address(mayor)
     ip2 = ipaddress.ip_address(menor)
 
-    try:  # Comparar las direcciones IP      
+    try:  # Comparar las direcciones IP para verificar que el rango sea valido
         if ip1 > ip2:
             return True
         elif ip1 < ip2:
@@ -224,13 +177,13 @@ def ipEsMayor(request, mayor, menor):
         return f"Error en la dirección IP: {e}" 
 
 @login_required
-def ingresarRangoIps(request):
+def ingresarRangoIps(request): # Función para exonerar rangos de IPs 
     if request.method == 'POST':
         ips = IP.objects.all()
-        ipInicio = str(request.POST['ipInicio']).strip()
+        ipInicio = str(request.POST['ipInicio']).strip()#Toma las IPs ingresadas
         ipFin = str(request.POST['ipFin']).strip()
 
-        if validarIPValida(request, ipInicio) and validarIPValida(request, ipFin):
+        if validarIPValida(request, ipInicio) and validarIPValida(request, ipFin): # Valida las IPs para determinar si son validas o no y si lo son las ingresa en un rango exonerado
             if (ipEsMayor(request,ipFin, ipInicio)):
                 RangoExonerado.objects.create(ipInicio=ipInicio ,ipFin=ipFin)
             else:
@@ -239,11 +192,11 @@ def ingresarRangoIps(request):
         else:       
             return render(request, "detector.html", {'ips': ips , 'rutaRetorno': urlencode({'rutaRetorno': request.path}),'error': "Las IPs ingresadas no son validas"})  
 
-def seEncuentraEnRango( ip):
+def seEncuentraEnRango( ip): # Función para validar si una IP se encuentra en un rango exonerado
     ipVal = ipaddress.ip_address(ip)
     rangos = RangoExonerado.objects.all()
 
-    for rango in rangos:
+    for rango in rangos: # Analiza si la IP se encuentra en alguno de los rangos almacenados
         ipIni = ipaddress.ip_address(rango.ipInicio)
         ipFin = ipaddress.ip_address(rango.ipFin)
 
@@ -251,6 +204,7 @@ def seEncuentraEnRango( ip):
             return True
     
     return False
+
 #=============================================================================================
 #                 Funciones para las visualizaciones de IPs Amenaza
 #=============================================================================================
@@ -302,59 +256,70 @@ def ingresarNueva(request , ip , fuente , opcion='option2' , row=None):
         dominio = decodedResponse["data"]["domain"]
         isp = decodedResponse["data"]["isp"]
         tipoUso = decodedResponse["data"]["usageType"]
-        objetoPais, creadoPais = Pais.objects.get_or_create(iso2=pais) # Traemos o creamos el país de origen de la IP ya que debe existir segun el modelo de la DB
-        objectoDominio, creadoDominio = Dominio.objects.get_or_create(nomDominio=dominio)# Traemos o creamos el dominio de la IP
-        
 
-        if IP.objects.filter(ip=ip).exists(): #Verificamos si ya existe la direccion IP. Si existe controlamos el caso de si esta en la lista blanca
-            actual = IP.objects.filter(ip=ip)[0]
+        if decodedResponse["data"]["isPublic"] == True: # Con esta verificación revisamos si la IP es publica o privada
+            objetoPais, creadoPais = Pais.objects.get_or_create(iso2=pais) # Traemos o creamos el país de origen de la IP ya que debe existir segun el modelo de la DB
+            objectoDominio, creadoDominio = Dominio.objects.get_or_create(nomDominio=dominio)# Traemos o creamos el dominio de la IP
+            
 
-            if not Historial_IP_FW_Bloqueadas.objects.filter(ipBloqueada=actual).exists():
-                if Historial_IP_FW_Permitidas.objects.filter(ipPermitida=actual).exists():
-                    hPermitida = Historial_IP_FW_Permitidas.objects.filter(ipPermitida=actual)
-                    hPermitida.delete()
+            if IP.objects.filter(ip=ip).exists(): #Verificamos si ya existe la direccion IP. Si existe controlamos el caso de si esta en la lista blanca
+                actual = IP.objects.filter(ip=ip)[0]
 
-                    ipEspeciales = Casos_Especiales(ipEspecial = actual)
-                    ipEspeciales.save() #Creamos un caso especial con esta direccion IP
+                if not Historial_IP_FW_Bloqueadas.objects.filter(ipBloqueada=actual).exists():
+                    if Historial_IP_FW_Permitidas.objects.filter(ipPermitida=actual).exists():
+                        hPermitida = Historial_IP_FW_Permitidas.objects.filter(ipPermitida=actual)
+                        hPermitida.delete()
+
+                        ipEspeciales = Casos_Especiales(ipEspecial = actual)
+                        ipEspeciales.save() #Creamos un caso especial con esta direccion IP
+                    else:
+                        actual.estado = "Pendiente"
+                        actual.save() #Actualizamos los datos del registro de la IP 
                 else:
-                    actual.estado = "Pendiente"
-                    actual.save() #Actualizamos los datos del registro de la IP 
-            else:
-                print("Ip que ya esta bloqueda")
+                    print("Ip que ya esta bloqueda")
 
-            mandarACasosEspeciales(request, actual, 'ipDeEcuador') if objetoPais.nombre == 'Ecuador' else None
+                mandarACasosEspeciales(request, actual, 'ipDeEcuador') if objetoPais.nombre == 'Ecuador' else None
 
-        else: # Se crea la nueva direccion IP       
-            if opcion == 'option1': # En caso que la entrada del excel tenga formato
-                nuevaIP = IP(ip=ip , estado="Bloqueado", malicioso=malicioso, isp=isp,
-                            tipoUso=tipoUso , pais=objetoPais, dominio=objectoDominio,
-                            ataques=row[3], descripcion=row[4], peticiones=int(row[5]),
-                            firewall="NO", usuario=request.user.username, fuente=fuente)
-            else : # Si el escel de ingreso solo tiene IPs
-                nuevaIP = IP(ip=ip , estado="Bloqueado", malicioso=malicioso, isp=isp,
-                            tipoUso=tipoUso , pais=objetoPais, dominio=objectoDominio,
-                            firewall="NO", usuario=request.user.username, fuente=fuente)
+            else: # Se crea la nueva direccion IP       
+                if opcion == 'option1': # En caso que la entrada del excel tenga formato
+                    nuevaIP = IP(ip=ip , estado="Bloqueado", malicioso=malicioso, isp=isp,
+                                tipoUso=tipoUso , pais=objetoPais, dominio=objectoDominio,
+                                ataques=row[3], descripcion=row[4], peticiones=int(row[5]),
+                                firewall="NO", usuario=request.user.username, fuente=fuente)
+                else : # Si el escel de ingreso solo tiene IPs
+                    nuevaIP = IP(ip=ip , estado="Bloqueado", malicioso=malicioso, isp=isp,
+                                tipoUso=tipoUso , pais=objetoPais, dominio=objectoDominio,
+                                firewall="NO", usuario=request.user.username, fuente=fuente)
+                nuevaIP.save()
+
+                if DominioPermitido.objects.filter(nomDominio=objectoDominio).exists(): #Si la Ip se encuentra en un dominio permitido se asigna un estado de No Bloqueo
+                    print("Ingreso al dominio permitido")
+                    nuevaIP.estado = "No Bloqueado"
+                    nuevaIP.save()
+                    ipEspeciales = Casos_Especiales(ipEspecial = nuevaIP , razon = "Ip con Dominio Exonerado")
+                    ipEspeciales.save() #Creamos un caso especial con esta direccion IP
+                elif seEncuentraEnRango(ip): # Si se encuentra la IP en un rango exonerado se le asigna un estado de No Bloqueado
+                    print("Ingreso en un rango exonerado")
+                    nuevaIP.estado = "No Bloqueado"
+                    nuevaIP.save()
+                    ipEspeciales = Casos_Especiales(ipEspecial = nuevaIP , razon = "Ip con Rango Exonerado")
+                    ipEspeciales.save() #Creamos un caso especial con esta direccion IP
+                else:    
+                    print("Ingreso al Bloqueo")    
+                    nuevaBloqueada = Historial_IP_FW_Bloqueadas(ipBloqueada=nuevaIP)
+                    nuevaBloqueada.save() #Creamos la nueva IP y se establece como bloqueada
+
+                mandarACasosEspeciales(request, nuevaIP, 'ipDeEcuador') if objetoPais.nombre == 'Ecuador' else None # En caso de la IP ser de Ecuador se la exonera
+        else: # Si la IP es privada se le asignan valores quemados referentes a indicar que es una IP Privada
+            objetoPais = Pais.objects.get(iso3='000')
+            objetoDominio = Dominio.objects.get(nomDominio='Red Privada')
+            nuevaIP = IP(ip=ip , estado="No Bloqueado", malicioso=malicioso, isp=isp,
+                                tipoUso="Desconocido" , pais=objetoPais, dominio=objetoDominio,
+                                firewall="NO", usuario=request.user.username, fuente=fuente)
+            ipEspeciales = Casos_Especiales(ipEspecial = nuevaIP , razon = "Ip Privada")
             nuevaIP.save()
-
-            if DominioPermitido.objects.filter(nomDominio=objectoDominio).exists(): #Si la Ip se encuentra en un dominio permitido se asigna un estado de No Bloqueo
-                print("Ingreso al dominio permitido")
-                nuevaIP.estado = "No Bloqueado"
-                nuevaIP.save()
-                ipEspeciales = Casos_Especiales(ipEspecial = nuevaIP , razon = "Ip con Dominio Exonerado")
-                ipEspeciales.save() #Creamos un caso especial con esta direccion IP
-            elif seEncuentraEnRango(ip):
-                print("Ingreso en un rango exonerado")
-                nuevaIP.estado = "No Bloqueado"
-                nuevaIP.save()
-                ipEspeciales = Casos_Especiales(ipEspecial = nuevaIP , razon = "Ip con Rango Exonerado")
-                ipEspeciales.save() #Creamos un caso especial con esta direccion IP
-            else:    
-                print("Ingreso al Bloqueo")    
-                nuevaBloqueada = Historial_IP_FW_Bloqueadas(ipBloqueada=nuevaIP)
-                nuevaBloqueada.save() #Creamos la nueva IP y se establece como bloqueada
-
-            mandarACasosEspeciales(request, nuevaIP, 'ipDeEcuador') if objetoPais.nombre == 'Ecuador' else None
-
+            ipEspeciales.save()
+            
     except Exception as e:
         print(e , "al ingresar")
         return ip
@@ -370,7 +335,8 @@ def leer_archivo(request, archivo_subido, tipo_entrada, fuente): #Función para 
             next(filas) if tipo_entrada == 'option1' else None # La opcion 1 hace referencia a un archivo con formato 
             for row in filas:
                 try:
-                    ip = row[0] # Tomamos el campo de IP y lo mandamos a ingresar a la DB
+                    ip = str(row[0]).strip().replace(',','.') # Tomamos el campo de IP y lo mandamos a ingresar a la DB
+                    print(ip)
                     ingreso = ingresarNueva(request, ip, fuente, tipo_entrada, row) # Sigue el proceso para verificar el estado que asume 
                 except Exception as e:
                     print(f'Error al analizar IP: {str(e)}')
@@ -381,7 +347,7 @@ def leer_archivo(request, archivo_subido, tipo_entrada, fuente): #Función para 
     elif archivo_subido.name.endswith('.txt'): # En caso de ser un archivo txt 
         try:
             for linea in archivo_subido:
-                ip = linea.decode('utf-8').strip() # Decodificamos el archivo con utf-8 para evitar el cambio o aumento de caracteres 
+                ip = linea.decode('utf-8').strip().replace(',','.') # Decodificamos el archivo con utf-8 para evitar el cambio o aumento de caracteres 
                 print(ip) 
                 try:
                     ingreso = ingresarNueva(request, ip, fuente) # Mandamos a ingresar la IP
@@ -410,7 +376,7 @@ def detector(request): # Pagina render del visualizador de IPs
             if len(ipsConError)> 0: # Organizamos el mensaje final de usuario en caso de que no se puedan procesar las IPs 
                 mensajeNoSubidas = "Error al procesar la(s) ip(s): "
                 for ip in ipsConError:
-                    mensajeNoSubidas += ip+"     ,     "
+                    mensajeNoSubidas += str(ip)+"     ,     "
                 mensajeNoSubidas += "  recuerde revisar las IPs pendientes." # Mandamos el mensaje con las IPs que no se pudieron procesar 
                 return render(request , 'detector.html' , {'ips': ips , 'rutaRetorno': urlencode({'rutaRetorno': request.path}), 'error': mensajeNoSubidas})
             else: # Si todas las IPs son correctas mandamos un mensaje de exito al ingresar 
@@ -425,6 +391,16 @@ def establecerBloqueoTemporal(request, ip, fechaInicio, fechaFin): # Función pa
 
     fechaInicio = datetime.strptime(fechaInicio, '%Y-%m-%d').date() if fechaInicio else None # Tomamos las fechas entre las cuales se ejecutara el bloqueo
     fechaFin = datetime.strptime(fechaFin, '%Y-%m-%d').date() if fechaFin else None
+
+    if fechaFin == None and fechaInicio != None: # Si hay fecha de inicio pero no de fin se establece esta ultima un año más
+        fechaFin = fechaInicio + relativedelta(years=1)
+    elif fechaInicio == None and fechaFin != None: # Si no hay fecha de inicio peor si de fin, la fecha de inicio es hoy
+        fechaInicio = datetime.today().date()
+    if fechaInicio > fechaFin : # Se analiza que la fecha de inicio sea menor a la de fin 
+        aux = fechaInicio
+        fechaInicio = fechaFin
+        fechaFin = aux 
+
 
     objetoBloqueada, creadoBloqueada = Historial_IP_FW_Bloqueadas.objects.get_or_create(ipBloqueada = ip) # Traemos la IP bloqueada o la creamos en caso de no existir 
     nueva = BloqueadasTemporales(ipBloqueada=objetoBloqueada , fechaInicio=fechaInicio if fechaInicio else None , fechaFin=fechaFin) # Creamos un nuevo Bloqueo Temporal 
@@ -473,9 +449,9 @@ def anadirIndividual(request): # Función para el ingreso de IPs de forma manual
                 establecerBloqueoTemporal(request, IP.objects.filter(ip=ip)[0] , request.POST.get('fechaInicio') , request.POST.get('fechaFin') )
 
             messages.error(request, "Falla en ingreso de la IP") if verificacion else messages.success(request, "Ip ingresada con exito.")
-        except:
+        except Exception as e:
             IP.objects.filter(ip = ip).delete()
-            messages.error(request, "Falla en ingreso de la IP")
+            messages.error(request, "Falla en ingreso de la IP ,"+str(e))
             pass
         return redirect('detector')
         

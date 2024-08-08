@@ -1,0 +1,11 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+  <form method="post" action="{% url 'admin:login' %}">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    {{ form.username.label_tag }} {{ form.username }}
+    {{ form.password.label_tag }} {{ form.password }}
+    {{ form.verification_code.label_tag }} {{ form.verification_code }}
+    <button type="submit">Iniciar sesión</button>
+  </form>
+{% endblock %}

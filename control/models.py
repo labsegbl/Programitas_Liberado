@@ -11,7 +11,7 @@ import pyotp
 #                 Modelo generado para el 2FA
 #=============================================================================================
 
-User.add_to_class('otp_secret', models.CharField(max_length=16, blank=True, null=True))
+User.add_to_class('otp_secret', models.CharField(max_length=40, blank=True, null=True))
 
 #=============================================================================================
 #                 Modelos generados para control de IPs
@@ -25,7 +25,8 @@ class Pais(models.Model):
     phonecod = models.CharField(max_length=5 , default="00000")
 
     def __str__(self):
-        return self.nombre
+        #return self.nombre
+        return f"{self.nombre} - {self.iso2}"
     
 class Dominio(models.Model):
     nomDominio = models.CharField(max_length=100, unique=True)

@@ -10,7 +10,8 @@
   <div class="container">
     <br><h1>Codigo de activación de 2FA</h1><hr><br>
     <p>{{request.user}}, asegurate de no compartir tu codigo con nadie</p><hr>
-
+    
+    <p>{{ qr_code_url }}</p><hr>
     <img src="{{ qr_code_url }}" alt="2FA QR Code">
 
   </div>

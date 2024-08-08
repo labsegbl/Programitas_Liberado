@@ -6,6 +6,7 @@ from django.conf.urls.static import static
 
 from . import views
 
+
 urlpatterns = [
     path("", views.index, name="index"),
     path("inicio/",views.inicio , name="inicio"),
@@ -31,4 +32,5 @@ urlpatterns = [
     path("block_ips.txt",views.endpointBloqueadas , name="endpoint"), 
     path("ipsTemporales/",views.revisarIPsTemporales , name="revisarIPsTemporales"),    
     path("anadirDominioExonerado/",views.anadirDominioExonerado , name="anadirDominioExonerado"),
-]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) # Añadir linea para generar las imagenes de los codigo QR de 2FA

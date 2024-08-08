@@ -139,3 +139,13 @@ LOGIN_URL = '/'
 CRON_CLASSES = [
     'control.cron.RevisarIPsTemporalesCronJob',
 ]
+
+"""
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'labsegbl@gmail.com'
+EMAIL_HOST_PASSWORD = 'L4b18#20'
+EMAIL_USE_TLS = True
+"""
