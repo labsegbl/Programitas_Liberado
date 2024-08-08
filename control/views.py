@@ -188,9 +188,11 @@ def ingresarRangoIps(request): # Función para exonerar rangos de IPs
                 RangoExonerado.objects.create(ipInicio=ipInicio ,ipFin=ipFin)
             else:
                 RangoExonerado.objects.create(ipInicio=ipFin,ipFin=ipInicio)
-            return render(request, "detector.html", {'ips': ips , 'rutaRetorno': urlencode({'rutaRetorno': request.path}),'exito': "El rango de IPs se ingreso con exito"})
-        else:       
-            return render(request, "detector.html", {'ips': ips , 'rutaRetorno': urlencode({'rutaRetorno': request.path}),'error': "Las IPs ingresadas no son validas"})  
+                messages.success(request, "El rango de IPs se ingreso con exito")
+            return redirect('detector')
+        else:     
+            messages.error(request, "Las IPs ingresadas no son validas")  
+            return redirect('detector')
 
 def seEncuentraEnRango( ip): # Función para validar si una IP se encuentra en un rango exonerado
     ipVal = ipaddress.ip_address(ip)
