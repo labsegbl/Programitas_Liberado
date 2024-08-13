@@ -148,13 +148,13 @@
                     </div>                  
                     <div class="mb-3 ">
                         <div class="form-check">
-                            <input class="form-check-input checkbox-unico" type="radio" name="tipoEntrada" id="exampleRadios1" value="option1" checked>
+                            <input class="form-check-input checkbox-unico" type="radio" name="tipoEntrada" id="exampleRadios1" value="option1">
                             <label class="form-check-label" for="exampleRadios1">
                                 Documento Estructurado
                             </label>
                           </div>
                           <div class="form-check">
-                            <input class="form-check-input checkbox-unico" type="radio" name="tipoEntrada" id="exampleRadios2" value="option2">
+                            <input class="form-check-input checkbox-unico" type="radio" name="tipoEntrada" id="exampleRadios2" value="option2" checked>
                             <label class="form-check-label" for="exampleRadios2">
                                 Solo IPs
                             </label>
@@ -205,10 +205,12 @@
                         <div class="col-md-6 mb-3">
                             <label for="fecha">Fecha Inicio</label>
                             <input type="date" id="fechaInicio" name="fechaInicio" class="form-control">
+                            <div id="ipError" class="text-danger" style="display: none;">La dirección IP ingresada no es válida.</div>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="fecha">Fecha fin</label>
                             <input type="date" id="fechaFin" name="fechaFin" class="form-control">
+                            <div id="ipError" class="text-danger" style="display: none;">La dirección IP ingresada no es válida.</div>
                         </div>       
                     </div>
 
@@ -233,10 +235,11 @@
                 <form action="{% url 'ingresarRangoIps' %}" method="post" class="rango" >
                     {% csrf_token %}  
                     <div class="mb-3">
-                        <input type="text" class="form-control" name="ipInicio" placeholder="Ingrese la IP incio">
+                        <input type="text" class="form-control" name="ipInicio" id="ipInicio" placeholder="Ingrese la IP incio">
                     </div>
                     <div class="mb-3">
-                        <input type="text" class="form-control" name="ipFin" placeholder="Ingrese la Ip fin">
+                        <input type="text" class="form-control" name="ipFin" id="ipFin" placeholder="Ingrese la Ip fin">
+                        <div id="ipErrorRango" class="text-danger" style="display: none;">Revise, las IPs no son validas.</div>
                     </div>
                     <button class="btn btn-primary w-100 py-2" type="button" id="button-addon3">Ingresar</button>   
                 </form>
@@ -357,8 +360,14 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const ipInput = document.getElementById('ipIndividual');
+        const ipInputInicio = document.getElementById('ipInicio');
+        const ipInputFin = document.getElementById('ipFin');
+
         const ipError = document.getElementById('ipError');
+        const ipErrorRango = document.getElementById('ipErrorRango');
+
         const submitButton = document.getElementById('button-addon2');
+        const submitButtonRange = document.getElementById('button-addon3');
     
         function isValidIP(ip) {
             const ipRegex = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
@@ -375,11 +384,26 @@
                 submitButton.disabled = true;
             }
         }
+
+        function validateRange(){
+            const ipValueInicio = ipInputInicio.value;
+            const ipValueFin = ipInputFin.value;
+            if (isValidIP(ipValueInicio) && isValidIP(ipValueFin)) {
+                ipErrorRango.style.display = 'none';
+                submitButtonRange.disabled = false;
+            } else {
+                ipErrorRango.style.display = 'block';
+                submitButtonRange.disabled = true;
+            }
+        }
     
         ipInput.addEventListener('input', validateIP);
+        ipInputInicio.addEventListener('input', validateRange);
+        ipInputFin.addEventListener('input', validateRange);
     
         // Initial validation in case the field is pre-filled
         validateIP();
+        validateRange();
     });
 </script>
     

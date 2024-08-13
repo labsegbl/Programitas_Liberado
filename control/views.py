@@ -188,7 +188,7 @@ def ingresarRangoIps(request): # Función para exonerar rangos de IPs
                 RangoExonerado.objects.create(ipInicio=ipInicio ,ipFin=ipFin)
             else:
                 RangoExonerado.objects.create(ipInicio=ipFin,ipFin=ipInicio)
-                messages.success(request, "El rango de IPs se ingreso con exito")
+                messages.error(request, "El rango de IPs se ingreso con exito")
             return redirect('detector')
         else:     
             messages.error(request, "Las IPs ingresadas no son validas")  
@@ -727,7 +727,7 @@ def accionesMultiples(request): #Aplicamos acciones de cambios a multiples direc
             for id_ip in ids:  #Cambiamos las direcciones IPs de los casos especiales 
                 Casos_Especiales.objects.get(ipEspecial=id_ip).delete()
 
-        messages.success(request, "Acción aplicada con éxito.")
+        messages.error(request, "Acción aplicada con éxito.")
         return redirect('detector')  # Redirigir a la página principal
     else:
         messages.error(request, "Método no permitido.")
