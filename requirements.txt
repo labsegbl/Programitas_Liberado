@@ -1,7 +1,10 @@
 Django==5.0.4
 django-import-export==4.1.1
 django-cron==0.6.0
+dj-database-url==2.2.0
 pyotp==2.9.0
+psycopg2-binary==2.9.9
+python-decouple==3.8
 qrcode==7.4.2
 colorama==0.4.6
 pillow==10.4.0

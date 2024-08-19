@@ -91,7 +91,7 @@ def validarUsuario(request): #Función para validar los usuarios al momento de l
                     return render(request, 'login.html' , {'error': "El código OTP es incorrecto."})
 
             login(request, user) # Se logeea el usuario, este hace uso de cookies para navegar entre las paginas
-            return redirect('inicio') # Se redirecciona a la pagina principal
+            return redirect('detector') # Se redirecciona a la pagina principal
         else:
             return render(request, 'login.html' , {'error': "Algó salio mal en la autenticación \nCompruebe que su usuario y contraseña sean correctos"})
     else:
@@ -660,17 +660,8 @@ def exportar(request , tipo): #El tipo indicara que exportar. 1:Todo, 2:Bloquead
         nombre = "datosIP"
         dataset = ips_resource.export(ips)
 
-    #response = HttpResponse(content_type='text/csv') #Creamo suna respuesta HTTP para enviar el documento 
-    #response['Content-Disposition'] = 'attachment; filename={}'.format(nombre)
-
     response = HttpResponse(dataset.xlsx, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = f'attachment; filename="{nombre}.xlsx"'
-
-    #writer = csv.writer(response) #Creamos un escritor de csv y establecemos el encabezado 
-    #writer.writerow(['IP', 'ESTADO', 'MALICIOSO', 'ISP', 'TIPO USO', 'PAÍS', 'DOMINIO', 'ATAQUES', 'DESCRIPCION', 'PETICIONES', 'FIREWALL', 'USUARIO'])  # Encabezados de columna
-
-    #for ip in ips: #Escribimos cada una de las ips en base a las ips filtadas 
-    #    writer.writerow([ip.ip,ip.estado,ip.malicioso,ip.isp,ip.tipoUso,ip.pais,ip.dominio,ip.ataques,ip.descripcion,ip.peticiones,ip.firewall,ip.usuario])  # Los campos deben adaptarse a tu modelo
 
     return response
 
