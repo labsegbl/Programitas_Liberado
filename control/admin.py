@@ -3,9 +3,9 @@ from control.models import *
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin as DefaultUserAdmin
 
-"""from import_export import resources
+from import_export import resources
 from import_export.admin import ImportExportModelAdmin
-from control.models import *"""
+from control.models import *
 
 # Define el recurso de importación/exportación
 class UserResource(resources.ModelResource):
