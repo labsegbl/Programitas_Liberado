@@ -3,9 +3,9 @@ from control.models import *
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin as DefaultUserAdmin
 
-from import_export import resources
+"""from import_export import resources
 from import_export.admin import ImportExportModelAdmin
-from control.models import *
+from control.models import *"""
 
 # Define el recurso de importación/exportación
 class UserResource(resources.ModelResource):
@@ -34,7 +34,7 @@ admin.site.register(User, UserAdmin)
 #                            Clases para exportar los models en el administrador 
 # ==================================================================================================================
 
-class IpResource(resources.ModelResource):
+"""class IpResource(resources.ModelResource):
     class Meta:
         model = IP 
 class IpAdmin(ImportExportModelAdmin):
@@ -86,14 +86,14 @@ class RangoExoneradoResource(resources.ModelResource):
     class Meta:
         model = RangoExonerado
 class RangoExoneradoAdmin(ImportExportModelAdmin):
-    resource_class = RangoExoneradoResource
+    resource_class = RangoExoneradoResource"""
 
 # ==================================================================================================================
 #                               Modelos para mostrar en el administrador
 # ==================================================================================================================
 
 # Register your models here.
-admin.site.register(IP, IpAdmin)
+"""admin.site.register(IP, IpAdmin)
 admin.site.register(Pais, PaisAdmin)
 admin.site.register(Dominio, DominioAdmin)
 admin.site.register(DominioPermitido, DominioPermitidoAdmin)
@@ -102,4 +102,16 @@ admin.site.register(Historial_IP_FW_Bloqueadas, Historial_IP_FW_BloqueadasAdmin)
 admin.site.register(Casos_Especiales, Casos_EspecialesAdmin)
 admin.site.register(BloqueadasTemporales, BloqueadasTemporalesAdmin)
 admin.site.register(RangoExonerado, RangoExoneradoAdmin)
+admin.site.register(Logs)"""
+
+# Register your models here.
+admin.site.register(IP)
+admin.site.register(Pais)
+admin.site.register(Dominio)
+admin.site.register(DominioPermitido)
+admin.site.register(Historial_IP_FW_Permitidas)
+admin.site.register(Historial_IP_FW_Bloqueadas)
+admin.site.register(Casos_Especiales)
+admin.site.register(BloqueadasTemporales)
+admin.site.register(RangoExonerado)
 admin.site.register(Logs)
