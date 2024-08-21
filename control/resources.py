@@ -2,7 +2,7 @@
 from import_export import resources
 from .models import IP
 
-class IPResource(resources.ModelResource):
+class IPResource(resources.ModelResource): # Este recurso es para poder exportar los datos de las direcciones IP y se establecen los campos 
     class Meta:
         model = IP
         # Puedes especificar los campos que quieres exportar aquí

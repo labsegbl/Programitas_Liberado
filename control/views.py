@@ -1,49 +1,48 @@
+# Imports estándar de Python
+import csv, io , json, os, re, threading
 from collections import defaultdict
 from datetime import datetime
-from dateutil.relativedelta import relativedelta
-import os , csv , json , openpyxl , requests , io , re, ipaddress
-import pandas as pd
 from time import sleep
 from urllib.parse import quote, unquote_plus
+import ipaddress
+import pyotp
+import qrcode
 import openpyxl
 from openpyxl.utils.dataframe import dataframe_to_rows
+from io import BytesIO
 
-
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.views import LoginView
-from django.contrib.auth.models import User
-from django.http import HttpResponse, JsonResponse
-from django.utils import timezone
-from django.utils.http import urlencode
-from django.shortcuts import render, redirect
-from django.conf import settings
-from django.db import IntegrityError
-from django.views.generic import View
-
-
+# Imports de terceros
+import requests
+import pandas as pd
+from dateutil.relativedelta import relativedelta
 from selenium import webdriver
-#from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-#from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select, WebDriverWait
+from decouple import config
 
+# Imports de Django
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from django.contrib.auth.views import LoginView
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
+from django.db import IntegrityError
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import render, redirect
+from django.utils import timezone
+from django.utils.http import urlencode
+from django.views.generic import View, TemplateView
+
+# Imports locales
 from .forms import *
 from .models import *
 from .resources import *
 
-#=============================================================
-#                  REVISAR
-#=============================================================
-
-import pyotp , qrcode , threading
-from io import BytesIO
-from django.core.files.storage import default_storage
-from django.core.files.base import ContentFile
-from django.views.generic import TemplateView
 
 #Redireccionamiento a las platillas de html que se crearon 
 def index(request , mensaje=None): #Plantilla de logeo para los usuarios 
@@ -54,7 +53,7 @@ def inicio(request): #Plantilla de la primera pagina al entrar al sistema
     return render(request , 'inicio.html' , {'usuario':request.user} )
 
 #=============================================================================================
-#        Funciones para el control de los usuarios que pueden acceder o no al sistema 
+#        Funciones para el control de acceso de usuarios 
 #=============================================================================================
 
 @login_required
@@ -152,7 +151,7 @@ def setup_2fa(request): # Fución para activar y generar el 2FA con OTP, muestra
     return render(request, 'setup_2fa.html', context)
 
 #=============================================================================================
-#                 Funciones para las visualizaciones de IPs Amenaza
+#                      Verificaciones de validación de IPs
 #=============================================================================================
 
 regex = "^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$" # Formula regex para validar que una IP sea valida
@@ -194,37 +193,13 @@ def ingresarRangoIps(request): # Función para exonerar rangos de IPs
             messages.error(request, "Las IPs ingresadas no son validas")  
             return redirect('detector')
 
-def seEncuentraEnRango( ip): # Función para validar si una IP se encuentra en un rango exonerado
-    ipVal = ipaddress.ip_address(ip)
-    rangos = RangoExonerado.objects.all()
-
-    for rango in rangos: # Analiza si la IP se encuentra en alguno de los rangos almacenados
-        ipIni = ipaddress.ip_address(rango.ipInicio)
-        ipFin = ipaddress.ip_address(rango.ipFin)
-
-        if (ipIni<=ipVal and ipVal<=ipFin):
-            return True
-    
-    return False
-
-#=============================================================================================
-#                 Funciones para las visualizaciones de IPs Amenaza
-#=============================================================================================
-def bloquearCambios(): #Cambios realizados en el DBMS
-    ips = IP.objects.all()
-    for ip in ips:
-        if ip.estado == 'Bloqueado': #verifica que si se bloquearon ips en el administrador estos cambios se reflejen en el sistema
-            objetoBloqueado, creadoBloqueado = Historial_IP_FW_Bloqueadas.objects.get_or_create(ipBloqueada=ip)
-            if not creadoBloqueado:
-                objetoBloqueado.save()
-
 def obtenerDatosDeAbuse(ip): #Función para traer los datos del API de AbuseIpDB
     # Defining the api-endpoint
     url = 'https://api.abuseipdb.com/api/v2/check'    
     querystring = {'ipAddress': ip}   
     headers = {
         'Accept': 'application/json',
-        'Key': 'e4e928008fb19df971a9a15cc6e0053ab8aa31515766bdec4da5906c3705d921678d26682ea2b4d9'#apikey de la cuenta de Georky
+        'Key': config("ABUSE_APIKEY")#apikey de la cuenta de Georky
     }
     
     try:
@@ -234,6 +209,17 @@ def obtenerDatosDeAbuse(ip): #Función para traer los datos del API de AbuseIpDB
         print("Error al traer datos del API de abuse \n",e)
 
     return json.loads(response.text) #Se devuelve la respuesta en formato de JSON para que manipular los datos sea más fácil
+
+#=============================================================================================
+#                Control de estado de IPs
+#=============================================================================================
+def bloquearCambios(): #Cambios realizados en el DBMS
+    ips = IP.objects.all()
+    for ip in ips:
+        if ip.estado == 'Bloqueado': #verifica que si se bloquearon ips en el administrador estos cambios se reflejen en el sistema
+            objetoBloqueado, creadoBloqueado = Historial_IP_FW_Bloqueadas.objects.get_or_create(ipBloqueada=ip)
+            if not creadoBloqueado:
+                objetoBloqueado.save()
 
 @login_required
 def mandarACasosEspeciales(request, ip , caso): #Función para controlar casos especiales al tratar las IPs
@@ -327,68 +313,6 @@ def ingresarNueva(request , ip , fuente , opcion='option2' , row=None):
         return ip
 
 @login_required
-def leer_archivo(request, archivo_subido, tipo_entrada, fuente): #Función para tratar los archivos subidos 
-    ipsConError = [] # Una lista para tomar las ips que no se pudieron ingresar e informar de ello 
-    if archivo_subido.name.endswith('.xlsx'): # En caso de ser archivo de excel 
-        try:
-            wb = openpyxl.load_workbook(archivo_subido) 
-            sheet = wb.active #Tomamos la primera hoja del archivo 
-            filas = sheet.iter_rows(values_only=True) #Extraemos las filas  
-            next(filas) if tipo_entrada == 'option1' else None # La opcion 1 hace referencia a un archivo con formato 
-            for row in filas:
-                try:
-                    ip = str(row[0]).strip().replace(',','.') # Tomamos el campo de IP y lo mandamos a ingresar a la DB
-                    print(ip)
-                    ingreso = ingresarNueva(request, ip, fuente, tipo_entrada, row) # Sigue el proceso para verificar el estado que asume 
-                except Exception as e:
-                    print(f'Error al analizar IP: {str(e)}')
-
-                ipsConError.append(ingreso) if ingreso else None # En caso de existir error al ingresar la almacenamos 
-        except Exception as e:
-            print(f'Error al procesar el archivo Excel: {str(e)}')
-    elif archivo_subido.name.endswith('.txt'): # En caso de ser un archivo txt 
-        try:
-            for linea in archivo_subido:
-                ip = linea.decode('utf-8').strip().replace(',','.') # Decodificamos el archivo con utf-8 para evitar el cambio o aumento de caracteres 
-                print(ip) 
-                try:
-                    ingreso = ingresarNueva(request, ip, fuente) # Mandamos a ingresar la IP
-                except:
-                    pass
-
-                ipsConError.append(ingreso) if ingreso else None # En caso de existir error al ingresar la almacenamos 
-        except Exception as e:
-            print(f'Error al procesar el archivo de texto: {str(e)}')
-
-    return ipsConError #Devolvemos todas las IPs con error para presentarlas al usuario 
-
-@login_required
-def detector(request): # Pagina render del visualizador de IPs 
-    ips = IP.objects.all()
-
-    if request.method == 'POST':
-        archivo_subido = request.FILES['archivoEntrada'] # Tomamos el archivo de IPs 
-        tipo_entrada = request.POST['tipoEntrada']
-        fuente = request.POST['fuente']
-
-        if archivo_subido.name.endswith('.xlsx') or archivo_subido.name.endswith('.txt'): # Verificamos que el archivo sea excel o txt caso contrario no lo procesara 
-            ipsConError = leer_archivo(request, archivo_subido, tipo_entrada , fuente) # Mandamos a leer el archivo y traemos las IPs que no se pudieron procesar 
-            ips = IP.objects.all() # Actualizamos las IPs de casos especiales para que el usuario pueda asignarles un estado 
-
-            if len(ipsConError)> 0: # Organizamos el mensaje final de usuario en caso de que no se puedan procesar las IPs 
-                mensajeNoSubidas = "Error al procesar la(s) ip(s): "
-                for ip in ipsConError:
-                    mensajeNoSubidas += str(ip)+"     ,     "
-                mensajeNoSubidas += "  recuerde revisar las IPs pendientes." # Mandamos el mensaje con las IPs que no se pudieron procesar 
-                return render(request , 'detector.html' , {'ips': ips , 'rutaRetorno': urlencode({'rutaRetorno': request.path}), 'error': mensajeNoSubidas})
-            else: # Si todas las IPs son correctas mandamos un mensaje de exito al ingresar 
-                return render(request , 'detector.html' , {'ips': ips , 'rutaRetorno': urlencode({'rutaRetorno': request.path}), 'exito': 'Archivo cargado con éxito.'})
-        else: # Si da error se debe devolver a la pagina principal de detección de IPs 
-            return render(request , 'detector.html' , {'ips': ips , 'rutaRetorno': urlencode({'rutaRetorno': request.path}), 'advertencia': 'El archivo debe tener formato .xlsx o .txt'})
-    else:
-        return render(request , 'detector.html' , {'ips': ips , 'rutaRetorno': urlencode({'rutaRetorno': request.path})})
-
-@login_required
 def establecerBloqueoTemporal(request, ip, fechaInicio, fechaFin): # Función para tratar con las IPs con Estado temporal establecido
 
     fechaInicio = datetime.strptime(fechaInicio, '%Y-%m-%d').date() if fechaInicio else None # Tomamos las fechas entre las cuales se ejecutara el bloqueo
@@ -457,9 +381,62 @@ def anadirIndividual(request): # Función para el ingreso de IPs de forma manual
             pass
         return redirect('detector')
         
-        
+@login_required
+def anadirANegra(request , id , rutaRetorno):
+    try:
+        ip = IP.objects.get(pk=id) #Buscamos la direccion IP en la DB 
+        ip.estado = "Bloqueado"
+        ip.save() #Cambiamos el estado de la IP
+        nuevaIP = Historial_IP_FW_Bloqueadas(ipBloqueada=ip) #Creamos la IP en la lista negra 
+        nuevaIP.save()
+
+        objetoPermitido = Historial_IP_FW_Permitidas.objects.filter(ipPermitida=ip.id) #En caso que esta haya estado en la lista blanca se la retira 
+        objetoPermitido.delete() if objetoPermitido else None
+
+        objetoRevision = Casos_Especiales.objects.filter(ipEspecial=ip.id)
+        objetoRevision.delete() if objetoRevision else None
+    except:
+        messages.error(request, "Direccion IP ya existente en bloqueadas.")
+        return redirect('detector')
+    return redirect(str(unquote_plus(rutaRetorno))[12:]) #Retorna a la pagina anterior
+
+@login_required
+def anadirABlanca(request , id , rutaRetorno ):
+    try:
+        ip = IP.objects.get(pk=id) #Buscamos la direccion IP en la DB 
+        ip.estado = "Exonerado"
+        ip.save()#Cambiamos el estado de la IP
+        nuevaIP = Historial_IP_FW_Permitidas(ipPermitida=ip) #Creamos la IP en la lista blanca 
+               
+        objetoBloqueado = Historial_IP_FW_Bloqueadas.objects.filter(ipBloqueada=ip.id)#En caso que esta haya estado en la lista negra se la retira 
+        objetoBloqueado.delete() if objetoBloqueado else None
+
+        objetoRevision = Casos_Especiales.objects.filter(ipEspecial=ip.id)
+        if objetoRevision:
+            nuevaIP.descripcion = objetoRevision.first().razon
+            objetoRevision.delete() 
+        else: None
+        nuevaIP.save()
+    except:
+        messages.error(request, "Direccion IP ya existente en permitidas.")
+        return redirect('detector')
+    return redirect(str(unquote_plus(rutaRetorno))[12:]) #Retorna a la pagina anterior
+
+def seEncuentraEnRango( ip): # Función para validar si una IP se encuentra en un rango exonerado
+    ipVal = ipaddress.ip_address(ip)
+    rangos = RangoExonerado.objects.all()
+
+    for rango in rangos: # Analiza si la IP se encuentra en alguno de los rangos almacenados
+        ipIni = ipaddress.ip_address(rango.ipInicio)
+        ipFin = ipaddress.ip_address(rango.ipFin)
+
+        if (ipIni<=ipVal and ipVal<=ipFin):
+            return True
+    
+    return False
+       
 #=============================================================================================
-#                 Llamado a las listas blanca y negra
+#                              Manejo de IPs
 #=============================================================================================
 
 @login_required
@@ -517,45 +494,66 @@ def listaBlanca(request):
         return render(request , 'ipPermitidas.html', {'ips': ips , 'rutaRetorno': urlencode({'rutaRetorno': request.path})})
 
 @login_required
-def anadirANegra(request , id , rutaRetorno):
-    try:
-        ip = IP.objects.get(pk=id) #Buscamos la direccion IP en la DB 
-        ip.estado = "Bloqueado"
-        ip.save() #Cambiamos el estado de la IP
-        nuevaIP = Historial_IP_FW_Bloqueadas(ipBloqueada=ip) #Creamos la IP en la lista negra 
-        nuevaIP.save()
+def leer_archivo(request, archivo_subido, tipo_entrada, fuente): #Función para tratar los archivos subidos 
+    ipsConError = [] # Una lista para tomar las ips que no se pudieron ingresar e informar de ello 
+    if archivo_subido.name.endswith('.xlsx'): # En caso de ser archivo de excel 
+        try:
+            wb = openpyxl.load_workbook(archivo_subido) 
+            sheet = wb.active #Tomamos la primera hoja del archivo 
+            filas = sheet.iter_rows(values_only=True) #Extraemos las filas  
+            next(filas) if tipo_entrada == 'option1' else None # La opcion 1 hace referencia a un archivo con formato 
+            for row in filas:
+                try:
+                    ip = str(row[0]).strip().replace(',','.') # Tomamos el campo de IP y lo mandamos a ingresar a la DB
+                    print(ip)
+                    ingreso = ingresarNueva(request, ip, fuente, tipo_entrada, row) # Sigue el proceso para verificar el estado que asume 
+                except Exception as e:
+                    print(f'Error al analizar IP: {str(e)}')
 
-        objetoPermitido = Historial_IP_FW_Permitidas.objects.filter(ipPermitida=ip.id) #En caso que esta haya estado en la lista blanca se la retira 
-        objetoPermitido.delete() if objetoPermitido else None
+                ipsConError.append(ingreso) if ingreso else None # En caso de existir error al ingresar la almacenamos 
+        except Exception as e:
+            print(f'Error al procesar el archivo Excel: {str(e)}')
+    elif archivo_subido.name.endswith('.txt'): # En caso de ser un archivo txt 
+        try:
+            for linea in archivo_subido:
+                ip = linea.decode('utf-8').strip().replace(',','.') # Decodificamos el archivo con utf-8 para evitar el cambio o aumento de caracteres 
+                print(ip) 
+                try:
+                    ingreso = ingresarNueva(request, ip, fuente) # Mandamos a ingresar la IP
+                except:
+                    pass
 
-        objetoRevision = Casos_Especiales.objects.filter(ipEspecial=ip.id)
-        objetoRevision.delete() if objetoRevision else None
-    except:
-        messages.error(request, "Direccion IP ya existente en bloqueadas.")
-        return redirect('detector')
-    return redirect(str(unquote_plus(rutaRetorno))[12:]) #Retorna a la pagina anterior
+                ipsConError.append(ingreso) if ingreso else None # En caso de existir error al ingresar la almacenamos 
+        except Exception as e:
+            print(f'Error al procesar el archivo de texto: {str(e)}')
+
+    return ipsConError #Devolvemos todas las IPs con error para presentarlas al usuario 
 
 @login_required
-def anadirABlanca(request , id , rutaRetorno ):
-    try:
-        ip = IP.objects.get(pk=id) #Buscamos la direccion IP en la DB 
-        ip.estado = "Exonerado"
-        ip.save()#Cambiamos el estado de la IP
-        nuevaIP = Historial_IP_FW_Permitidas(ipPermitida=ip) #Creamos la IP en la lista blanca 
-               
-        objetoBloqueado = Historial_IP_FW_Bloqueadas.objects.filter(ipBloqueada=ip.id)#En caso que esta haya estado en la lista negra se la retira 
-        objetoBloqueado.delete() if objetoBloqueado else None
+def detector(request): # Pagina render del visualizador de IPs 
+    ips = IP.objects.all()
 
-        objetoRevision = Casos_Especiales.objects.filter(ipEspecial=ip.id)
-        if objetoRevision:
-            nuevaIP.descripcion = objetoRevision.first().razon
-            objetoRevision.delete() 
-        else: None
-        nuevaIP.save()
-    except:
-        messages.error(request, "Direccion IP ya existente en permitidas.")
-        return redirect('detector')
-    return redirect(str(unquote_plus(rutaRetorno))[12:]) #Retorna a la pagina anterior
+    if request.method == 'POST':
+        archivo_subido = request.FILES['archivoEntrada'] # Tomamos el archivo de IPs 
+        tipo_entrada = request.POST['tipoEntrada']
+        fuente = request.POST['fuente']
+
+        if archivo_subido.name.endswith('.xlsx') or archivo_subido.name.endswith('.txt'): # Verificamos que el archivo sea excel o txt caso contrario no lo procesara 
+            ipsConError = leer_archivo(request, archivo_subido, tipo_entrada , fuente) # Mandamos a leer el archivo y traemos las IPs que no se pudieron procesar 
+            ips = IP.objects.all() # Actualizamos las IPs de casos especiales para que el usuario pueda asignarles un estado 
+
+            if len(ipsConError)> 0: # Organizamos el mensaje final de usuario en caso de que no se puedan procesar las IPs 
+                mensajeNoSubidas = "Error al procesar la(s) ip(s): "
+                for ip in ipsConError:
+                    mensajeNoSubidas += str(ip)+"     ,     "
+                mensajeNoSubidas += "  recuerde revisar las IPs pendientes." # Mandamos el mensaje con las IPs que no se pudieron procesar 
+                return render(request , 'detector.html' , {'ips': ips , 'rutaRetorno': urlencode({'rutaRetorno': request.path}), 'error': mensajeNoSubidas})
+            else: # Si todas las IPs son correctas mandamos un mensaje de exito al ingresar 
+                return render(request , 'detector.html' , {'ips': ips , 'rutaRetorno': urlencode({'rutaRetorno': request.path}), 'exito': 'Archivo cargado con éxito.'})
+        else: # Si da error se debe devolver a la pagina principal de detección de IPs 
+            return render(request , 'detector.html' , {'ips': ips , 'rutaRetorno': urlencode({'rutaRetorno': request.path}), 'advertencia': 'El archivo debe tener formato .xlsx o .txt'})
+    else:
+        return render(request , 'detector.html' , {'ips': ips , 'rutaRetorno': urlencode({'rutaRetorno': request.path})})
 
 @login_required
 def enRevision(request): # Para llamar al final de la carga de archivos los casos especiales o pendientes de IPs
@@ -577,7 +575,7 @@ def anadirDominioExonerado(request): # Función para tratar IPs especificas que 
             return render(request , 'ipPermitidas.html', {'ips': ips , 'error': 'No se pudo ingresar el Dominio' , 'rutaRetorno': urlencode({'rutaRetorno': request.path})})
         
 #=============================================================================================
-#                         Funciones de control de las IPs
+#                         Manipulación de IPs
 #=============================================================================================
 
 @login_required
