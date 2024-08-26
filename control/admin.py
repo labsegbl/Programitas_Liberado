@@ -18,7 +18,7 @@ class UserAdmin(ImportExportModelAdmin, DefaultUserAdmin):
     resource_class = UserResource
     model = User
 
-    list_display = DefaultUserAdmin.list_display + ('otp_secret',)
+    list_display = DefaultUserAdmin.list_display + ('otp_secret',) # Aumenta los campos que se aumentan en el administrador.
     fieldsets = DefaultUserAdmin.fieldsets + (
         (None, {'fields': ('otp_secret',)}),
     )
