@@ -154,7 +154,7 @@ def setup_2fa(request): # Fución para activar y generar el 2FA con OTP, muestra
 #                      Verificaciones de validación de IPs
 #=============================================================================================
 
-regex = "^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$" # Formula regex para validar que una IP sea valida
+regex = r"^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$" # Formula regex para validar que una IP sea valida
 
 @login_required
 def validarIPValida(request, ip):  # Función para determinar si una ip es valida o no 
