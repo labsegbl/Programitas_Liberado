@@ -80,19 +80,19 @@ def validarUsuario(request): #Función para validar los usuarios al momento de l
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
-        otp_code = request.POST.get('otp_code' , None) # Codigo de 2FA en caso de existir 
+        #otp_code = request.POST.get('otp_code' , None) # Codigo de 2FA en caso de existir 
         user = authenticate(request, username=username, password=password) # Verificamos al usuario y lo autenticamos si las credenciales son correctas
         
-        if user is not None:
-            if user.otp_secret:
-                totp = pyotp.TOTP(user.otp_secret) # Encuentra el usuario y busca el código OTP correspondiente y analiza si es correcto
-                if not totp.verify(otp_code):
-                    return render(request, 'login.html' , {'error': "El código OTP es incorrecto."})
+        #if user is not None:
+            #if user.otp_secret:
+               # totp = pyotp.TOTP(user.otp_secret) # Encuentra el usuario y busca el código OTP correspondiente y analiza si es correcto
+               # if not totp.verify(otp_code):
+                 #   return render(request, 'login.html' , {'error': "El código OTP es incorrecto."})
 
-            login(request, user) # Se logeea el usuario, este hace uso de cookies para navegar entre las paginas
-            return redirect('detector') # Se redirecciona a la pagina principal
-        else:
-            return render(request, 'login.html' , {'error': "Algó salio mal en la autenticación \nCompruebe que su usuario y contraseña sean correctos"})
+        login(request, user) # Se logeea el usuario, este hace uso de cookies para navegar entre las paginas
+        return redirect('detector') # Se redirecciona a la pagina principal
+        #else:
+            #return render(request, 'login.html' , {'error': "Algó salio mal en la autenticación \nCompruebe que su usuario y contraseña sean correctos"})
     else:
         return render(request, 'login.html')
 
