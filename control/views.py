@@ -373,7 +373,7 @@ def anadirIndividual(request): # Función para el ingreso de IPs de forma manual
                 ipPermitida = Historial_IP_FW_Permitidas.objects.filter(ipPermitida=IP.objects.filter(ip=ip)[0])
                 ipPermitida.delete() if ipPermitida.exists() else None 
                 establecerBloqueoTemporal(request, IP.objects.filter(ip=ip)[0] , request.POST.get('fechaInicio') , request.POST.get('fechaFin') )
-
+         
             messages.error(request, "Falla en ingreso de la IP") if verificacion else messages.success(request, "Ip ingresada con exito.")
         except Exception as e:
             IP.objects.filter(ip = ip).delete()

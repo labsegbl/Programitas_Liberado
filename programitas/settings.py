@@ -80,16 +80,16 @@ WSGI_APPLICATION = 'programitas.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-"""DATABASES = {
+DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
-}"""
+}
 
 
 
-DATABASES = {
+"""DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'db_ciberbl',
@@ -98,13 +98,12 @@ DATABASES = {
         'HOST': 'dpg-ctuo0nggph6c73eshja0-a.oregon-postgres.render.com',
         'PORT': '5432',
     }
-}
+}"""
 
 if config("IN_PRODUCTION", cast=bool):
     DATABASES["default"] = dj_database_url.parse(config("DATABASE_URL"))
 # Password validation
-# https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators usuario: seguridadBL
-#contraseña: !AVaxuvEpa59  Polito estas credenciales encontre, no se si funcionen 
+# https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators 
  
 #Credenciales Github y Render
 #labsegbl@gmailmcom
