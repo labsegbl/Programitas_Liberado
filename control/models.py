@@ -18,11 +18,11 @@ User.add_to_class('otp_secret', models.CharField(max_length=40, blank=True, null
 #=============================================================================================
 
 class Pais(models.Model):
-    nombre = models.CharField(max_length=100, null=False, unique=True)
-    name = models.CharField(max_length=100 , default="Desconocido")
-    iso2 = models.CharField(max_length=2 , default="00")
-    iso3 = models.CharField(max_length=3 , default="000")
-    phonecod = models.CharField(max_length=5 , default="00000")
+    nombre = models.CharField(max_length=500, null=False, unique=True)
+    name = models.CharField(max_length=500 , default="Desconocido")
+    iso2 = models.CharField(max_length=10 , default="00")
+    iso3 = models.CharField(max_length=10 , default="000")
+    phonecod = models.CharField(max_length=10 , default="00000")
 
     def __str__(self):
         #return self.nombre
