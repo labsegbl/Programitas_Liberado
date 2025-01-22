@@ -199,7 +199,7 @@ def obtenerDatosDeAbuse(ip): #Función para traer los datos del API de AbuseIpDB
     querystring = {'ipAddress': ip}   
     headers = {
         'Accept': 'application/json',
-        'Key': "e4e928008fb19df971a9a15cc6e0053ab8aa31515766bdec4da5906c3705d921678d26682ea2b4d9"#config("ABUSE_APIKEY")#apikey de la cuenta de Georky
+        'Key': config("ABUSE_APIKEY")#apikey de la cuenta de Georky
     }
     
     try:
